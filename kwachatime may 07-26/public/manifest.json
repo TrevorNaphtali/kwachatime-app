@@ -1,0 +1,89 @@
+{
+  "name": "Kwacha Time - Zambian Micro-Lending",
+  "short_name": "Kwacha Time",
+  "description": "Premier Zambian micro-lending platform providing secure and fast capital solutions. We offer flexible loan terms with convenient physical office disbursements across Zambia. KwachaTime is dedicated to financial inclusion and empowering local entrepreneurs.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": [
+    "window-controls-overlay",
+    "minimal-ui"
+  ],
+  "background_color": "#003809",
+  "theme_color": "#30ae00",
+  "orientation": "portrait",
+  "id": "com.kwachatime.app.v1.4",
+  "lang": "en-ZM",
+  "dir": "ltr",
+  "categories": [
+    "finance",
+    "productivity"
+  ],
+  "icons": [
+    {
+      "src": "icon.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Apply for Loan",
+      "url": "/?action=apply",
+      "description": "Start a new loan application",
+      "icons": [
+        {
+          "src": "icon.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Office Locations",
+      "url": "/?action=offices",
+      "description": "Find our physical offices",
+      "icons": [
+        {
+          "src": "icon.png",
+          "sizes": "192x192"
+        }
+      ]
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "https://pwa.xyz/OsHy5zYh3xSdfDzBbfdE%2FNvVsgjHDnHeKnRC.jpg?alt=media&token=7747e3b4-1c5c-459c-863b-cab8655bbdde",
+      "type": "image/jpeg",
+      "sizes": "900x1600",
+      "form_factor": "narrow",
+      "label": "KwachaTime Dashboard"
+    },
+    {
+      "src": "https://pwa.xyz/OsHy5zYh3xSdfDzBbfdE%2FKNLljmiKbWdunSA.jpg?alt=media&token=6a7972d5-3c3f-45fc-8de5-0a42064ad120",
+      "type": "image/jpeg",
+      "sizes": "900x1600",
+      "form_factor": "narrow",
+      "label": "Loan Application"
+    }
+  ],
+  "prefer_related_applications": false
+}

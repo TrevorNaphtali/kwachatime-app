@@ -1,0 +1,158 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile and credit information",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "email": { "type": "string" },
+        "nrc": { "type": "string" },
+        "phone": { "type": "string" },
+        "address": { "type": "string" },
+        "operator": { "type": "string", "enum": ["Airtel", "MTN", "Zamtel"] },
+        "role": { "type": "string", "enum": ["BORROWER", "ADMIN", "DEVELOPER"] },
+        "joinedAt": { "type": "string", "format": "date-time" },
+        "walletBalance": { "type": "number" },
+        "trustScore": { "type": "number" },
+        "currentLocation": {
+          "type": "object",
+          "properties": {
+            "lat": { "type": "number" },
+            "lng": { "type": "number" },
+            "timestamp": { "type": "string" }
+          }
+        }
+      },
+      "required": ["id", "name", "email", "nrc", "phone", "address", "role", "joinedAt"]
+    },
+    "Loan": {
+      "title": "Loan",
+      "description": "Loan request and status",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "principal": { "type": "number" },
+        "purpose": { "type": "string" },
+        "tenure": { "type": "string" },
+        "repaymentMethod": { "type": "string", "enum": ["CASH", "BANK_TRANSFER", "MOBILE_MONEY"] },
+        "status": { "type": "string", "enum": ["PENDING", "APPROVED", "DISBURSED", "REJECTED", "REPAID", "AWAITING_COLLATERAL"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "dueDate": { "type": "string", "format": "date-time" },
+        "collateralType": { "type": "string", "enum": ["LAPTOP", "PHONE", "CAR", "APPLIANCE", "LAND", "OTHER", "NONE"] },
+        "collateralDescription": { "type": "string" },
+        "hasAgreedToOwnership": { "type": "boolean" },
+        "hasAgreedToVerification": { "type": "boolean" }
+      },
+      "required": ["id", "userId", "userName", "principal", "purpose", "tenure", "repaymentMethod", "status", "createdAt", "dueDate"]
+    },
+    "DocumentMetadata": {
+      "title": "DocumentMetadata",
+      "description": "Metadata for generated documents",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "type": { "type": "string", "enum": ["CREDENTIAL_REPORT", "LOAN_AGREEMENT", "LETTER_OF_SALE", "POS_PRINT"] },
+        "url": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "borrowerId": { "type": "string" },
+        "loanId": { "type": "string" }
+      },
+      "required": ["id", "type", "url", "createdAt", "borrowerId"]
+    },
+    "AuditLog": {
+      "title": "AuditLog",
+      "description": "System audit logs",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "action": { "type": "string" },
+        "category": { "type": "string", "enum": ["SECURITY", "FINANCE", "SYSTEM", "IDENTITY"] },
+        "details": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "severity": { "type": "string", "enum": ["LOW", "MEDIUM", "HIGH", "CRITICAL"] }
+      },
+      "required": ["id", "userId", "userName", "action", "category", "details", "timestamp", "severity"]
+    },
+    "Transaction": {
+      "title": "Transaction",
+      "description": "Financial transactions",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "type": { "type": "string", "enum": ["DISBURSEMENT", "REPAYMENT", "DEPOSIT", "WITHDRAWAL"] },
+        "amount": { "type": "number" },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "status": { "type": "string", "enum": ["COMPLETED", "PENDING", "FAILED"] }
+      },
+      "required": ["id", "userId", "type", "amount", "timestamp", "status"]
+    },
+    "AppNotification": {
+      "title": "AppNotification",
+      "description": "In-app notifications",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "title": { "type": "string" },
+        "message": { "type": "string" },
+        "type": { "type": "string", "enum": ["INFO", "SUCCESS", "WARNING", "ERROR"] },
+        "read": { "type": "boolean" },
+        "timestamp": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "userId", "title", "message", "type", "read", "timestamp"]
+    },
+    "OutgoingEmail": {
+      "title": "OutgoingEmail",
+      "description": "Emails sent from the system",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "recipientEmail": { "type": "string" },
+        "recipientName": { "type": "string" },
+        "subject": { "type": "string" },
+        "body": { "type": "string" },
+        "status": { "type": "string", "enum": ["SENT", "FAILED", "DRAFTING"] },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "loanId": { "type": "string" }
+      },
+      "required": ["id", "recipientEmail", "recipientName", "subject", "body", "status", "timestamp", "loanId"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profile documents"
+    },
+    "/loans/{loanId}": {
+      "schema": "Loan",
+      "description": "Loan request documents"
+    },
+    "/documents/{docId}": {
+      "schema": "DocumentMetadata",
+      "description": "Document metadata documents"
+    },
+    "/auditLogs/{logId}": {
+      "schema": "AuditLog",
+      "description": "System audit logs"
+    },
+    "/transactions/{transactionId}": {
+      "schema": "Transaction",
+      "description": "Financial transactions"
+    },
+    "/notifications/{notificationId}": {
+      "schema": "AppNotification",
+      "description": "In-app notifications"
+    },
+    "/outgoingEmails/{emailId}": {
+      "schema": "OutgoingEmail",
+      "description": "System emails"
+    }
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "name": "KwachaTime",
+  "description": "A premier Zambian micro-lending platform offering quick loans, smart interest calculations, and seamless mobile money integration for Airtel, MTN, and Zamtel.",
+  "requestFramePermissions": [
+    "geolocation",
+    "camera"
+  ]
+}

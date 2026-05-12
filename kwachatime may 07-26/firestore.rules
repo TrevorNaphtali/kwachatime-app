@@ -1,0 +1,219 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: users
+    // Document ID: {userId} (matches request.auth.uid)
+    // Fields:
+    //   - id: string (required)
+    //   - name: string (required, 1-100 chars)
+    //   - email: string (required, valid format)
+    //   - nrc: string (required)
+    //   - phone: string (required)
+    //   - address: string (required)
+    //   - operator: string (enum: Airtel, MTN, Zamtel)
+    //   - role: string (enum: BORROWER, ADMIN, DEVELOPER)
+    //   - joinedAt: string (ISO 8601)
+    //   - walletBalance: number (optional)
+    //   - trustScore: number (optional)
+    //   - currentLocation: map (optional, lat/lng/timestamp)
+    //
+    // Collection: loans
+    // Document ID: {loanId}
+    // Fields:
+    //   - id: string (required)
+    //   - userId: string (required, matches borrower)
+    //   - userName: string (required)
+    //   - principal: number (required, positive)
+    //   - purpose: string (required)
+    //   - tenure: string (required)
+    //   - repaymentMethod: string (enum: CASH, BANK_TRANSFER, MOBILE_MONEY)
+    //   - status: string (enum: PENDING, APPROVED, DISBURSED, REJECTED, REPAID, AWAITING_COLLATERAL)
+    //   - createdAt: string (ISO 8601)
+    //   - dueDate: string (ISO 8601)
+    //   - collateralType: string (enum: LAPTOP, PHONE, CAR, APPLIANCE, LAND, OTHER, NONE)
+    //   - collateralDescription: string (required)
+    //   - hasAgreedToOwnership: bool (required)
+    //   - hasAgreedToVerification: bool (required)
+    //
+    // Collection: documents
+    // Fields: id, type, url, createdAt, borrowerId, loanId
+    //
+    // Collection: auditLogs
+    // Fields: id, userId, userName, action, category, details, timestamp, severity
+    //
+    // Collection: transactions
+    // Fields: id, userId, type, amount, timestamp, status
+    //
+    // Collection: notifications
+    // Fields: id, userId, title, message, type, read, timestamp
+    //
+    // Collection: outgoingEmails
+    // Fields: id, recipientEmail, recipientName, subject, body, status, timestamp, loanId
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && (
+        request.auth.token.email in ['naphtali.tre@gmail.com', 'ocmwila@networkit.info', 'pa@networkit.info', 'naphtali@networkit.info'] ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['ADMIN', 'DEVELOPER'])
+      );
+    }
+
+    function isValidEmail(email) {
+      return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    }
+
+    function isValidDateString(dateStr) {
+      return dateStr is string && dateStr.matches("^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}.*Z?$");
+    }
+
+    function hasOnlyAllowedFields(fields) {
+      return request.resource.data.keys().hasOnly(fields);
+    }
+
+    function areImmutableFieldsUnchanged(fields) {
+      return !request.resource.data.diff(resource.data).affectedKeys().hasAny(fields);
+    }
+
+    // ===============================================================
+    // Domain Validators
+    // ===============================================================
+
+    function isValidUser(data) {
+      let requiredFields = ['id', 'name', 'email', 'nrc', 'phone', 'address', 'role', 'joinedAt'];
+      let allowedFields = ['id', 'name', 'email', 'nrc', 'phone', 'address', 'role', 'joinedAt', 'walletBalance', 'trustScore', 'currentLocation', 'operator', 'dob', 'employment', 'incomeSource', 'nextOfKinName', 'nextOfKinPhone'];
+      return data.keys().hasAll(requiredFields) &&
+             data.keys().hasOnly(allowedFields) &&
+             data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
+             isValidEmail(data.email) &&
+             data.role in ['BORROWER', 'ADMIN', 'DEVELOPER'] &&
+             isValidDateString(data.joinedAt) &&
+             (data.walletBalance == null || data.walletBalance is number) &&
+             (data.trustScore == null || data.trustScore is number);
+    }
+
+    function isValidLoan(data) {
+      let requiredFields = ['id', 'userId', 'userName', 'principal', 'purpose', 'tenure', 'repaymentMethod', 'status', 'createdAt', 'dueDate', 'collateralType', 'collateralDescription', 'hasAgreedToOwnership', 'hasAgreedToVerification'];
+      return data.keys().hasAll(requiredFields) &&
+             data.principal is number && data.principal > 0 &&
+             data.status in ['PENDING', 'APPROVED', 'DISBURSED', 'REJECTED', 'REPAID', 'AWAITING_COLLATERAL'] &&
+             data.repaymentMethod in ['CASH', 'BANK_TRANSFER', 'MOBILE_MONEY'] &&
+             data.collateralType in ['LAPTOP', 'PHONE', 'CAR', 'APPLIANCE', 'LAND', 'OTHER', 'NONE'] &&
+             isValidDateString(data.createdAt) &&
+             isValidDateString(data.dueDate) &&
+             data.userId is string && data.userName is string && data.purpose is string && data.tenure is string;
+    }
+
+    function isValidAuditLog(data) {
+      let requiredFields = ['id', 'userId', 'userName', 'action', 'category', 'details', 'timestamp', 'severity'];
+      return data.keys().hasAll(requiredFields) &&
+             data.category in ['SECURITY', 'FINANCE', 'SYSTEM', 'IDENTITY'] &&
+             data.severity in ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'] &&
+             isValidDateString(data.timestamp);
+    }
+
+    function isValidTransaction(data) {
+      let requiredFields = ['id', 'userId', 'type', 'amount', 'timestamp', 'status'];
+      return data.keys().hasAll(requiredFields) &&
+             data.type in ['DISBURSEMENT', 'REPAYMENT', 'DEPOSIT', 'WITHDRAWAL'] &&
+             data.status in ['COMPLETED', 'PENDING', 'FAILED'] &&
+             data.amount is number &&
+             isValidDateString(data.timestamp);
+    }
+
+    function isValidNotification(data) {
+      let requiredFields = ['id', 'userId', 'title', 'message', 'type', 'read', 'timestamp'];
+      return data.keys().hasAll(requiredFields) &&
+             data.type in ['INFO', 'SUCCESS', 'WARNING', 'ERROR'] &&
+             data.read is bool &&
+             isValidDateString(data.timestamp);
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isAdmin() || 
+                    resource.data.email == 'naphtali.tre@gmail.com' || 
+                    resource.data.email == 'ocmwila@networkit.info' || 
+                    resource.data.email == 'pa@networkit.info';
+      allow create: if isAuthenticated() && 
+                      isValidUser(request.resource.data) && 
+                      (isOwner(userId) || isAdmin()) &&
+                      (request.resource.data.role == 'BORROWER' || isAdmin());
+      allow update: if isAuthenticated() && 
+                      isValidUser(request.resource.data) && 
+                      (isOwner(userId) || isAdmin()) &&
+                      (request.resource.data.role == resource.data.role || isAdmin());
+    }
+
+    match /loans/{loanId} {
+      allow read: if isAuthenticated() && (request.auth.uid == resource.data.userId || isAdmin());
+      allow create: if isAuthenticated() && 
+                      isValidLoan(request.resource.data) && 
+                      (request.auth.uid == request.resource.data.userId || isAdmin());
+      allow update: if isAuthenticated() && 
+                      isValidLoan(request.resource.data) && 
+                      (request.auth.uid == resource.data.userId || isAdmin()) &&
+                      (request.resource.data.userId == resource.data.userId || isAdmin());
+    }
+
+    match /auditLogs/{logId} {
+      allow read: if isAdmin();
+      allow create: if isAuthenticated() && isValidAuditLog(request.resource.data);
+    }
+
+    match /transactions/{txnId} {
+      allow read: if isAuthenticated() && (request.auth.uid == resource.data.userId || isAdmin());
+      allow create: if isAuthenticated() && isValidTransaction(request.resource.data);
+    }
+
+    match /notifications/{notificationId} {
+      allow read: if isAuthenticated() && (request.auth.uid == resource.data.userId || isAdmin());
+      allow create: if isAuthenticated() && isValidNotification(request.resource.data);
+      allow update: if isAuthenticated() && (request.auth.uid == resource.data.userId || isAdmin()) && isValidNotification(request.resource.data);
+    }
+
+    match /documents/{docId} {
+      allow read: if isAuthenticated() && (request.auth.uid == resource.data.borrowerId || isAdmin());
+      allow create: if isAuthenticated() && (request.auth.uid == request.resource.data.borrowerId || isAdmin());
+      allow update: if isAdmin();
+    }
+
+    match /outgoingEmails/{emailId} {
+      allow read: if isAdmin();
+      allow create: if isAuthenticated();
+    }
+
+    match /system/vault {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    match /test/connection {
+      allow read: if true;
+    }
+
+    // Default deny
+    match /{path=**} {
+      allow read, write: if false;
+    }
+  }
+}
